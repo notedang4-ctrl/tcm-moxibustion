@@ -6,10 +6,21 @@ import re
 import sys
 from pathlib import Path
 
-sys.path.insert(0, "/tmp/occdir")
+import os as _os
+sys.path.insert(0, _os.environ.get("TCM_OPENCC_DIR", "/tmp/occdir"))
 from opencc import OpenCC
 
-DATA = Path("/root/.hermes/skills/tcm-moxibustion/data")
+
+# --- workspace / data paths (override via env) -------------------------------
+
+_HERE = Path(__file__).resolve()
+SKILL_ROOT = _HERE.parents[2]      # scripts/extraction/x.py -> skill root
+DATA = Path(_os.environ.get("TCM_DATA", str(SKILL_ROOT / "data")))
+WORKSPACE = Path(_os.environ.get("TCM_WORKSPACE", "/tmp/tcm-src"))
+# -----------------------------------------------------------------------------
+
+
+
 cc = OpenCC("t2s")
 SUPP = [("谿", "溪"), ("龂", "龈"), ("𫍻", "譆")]
 
@@ -27,10 +38,21 @@ def s(t):
 PROSE = re.compile(r"之|為|者|其|所|故|皆|則")
 pts = json.loads((DATA / "acupoints.json").read_text(encoding="utf-8"))
 
+# 显式噪声清单：由人工判断得出，沉淀在 moxa_forbidden.json 的 noise_dropped，
+# 使复现流水线能精确重建线上数据（而非依赖手工剔除）。
+CURATED = {}
+_fb_path = DATA / "moxa_forbidden.json"
+if _fb_path.exists():
+    for x in json.loads(_fb_path.read_text(encoding="utf-8")).get("noise_dropped", []):
+        CURATED[x["name"]] = f"人工判定噪声（{x.get('reason', '')}）"
+
 removed = []
 keep = []
 for p in pts:
     n = p["name"]
+    if n in CURATED:
+        removed.append((n, CURATED[n]))
+        continue
     if n.startswith("灸") or "灸法" in n:
         removed.append((n, "治法条目/章节标题（非穴名）"))
         continue

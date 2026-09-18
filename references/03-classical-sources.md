@@ -88,27 +88,72 @@
 > 转换脚本：`scripts/extraction/build_simplified.py`（需 `opencc-python-reimplemented`，仅构建期依赖）。
 > 校验：`scripts/validate_skill.py` 检查简体字段无残留繁体（`[5] 简体层完整性`）。
 
-## 6. 复现方式
+## 6. 复现方式（已验证）
 
-提取脚本保留在 `scripts/extraction/`（随 skill 分发），临时工作区 `/tmp/tcm-src/` 可能被清理。
+数据**可精确重建**：从 `*.html` 跑完整流水线，产出的 `acupoints.json`（451 条）、
+`moxa_forbidden.json`、`symptoms.json` 与线上**逐字段一致**（2026-09-18 验证，
+差异 0 处）。
+
+一条命令：
 
 ```bash
-# 1) 抓取（各卷独立，注意加间隔避免限流）
-curl -A 'Mozilla/5.0' 'https://zh.wikisource.org/wiki/针灸大成/卷十' -o zjdc_十.html
+pip install --target /tmp/occdir opencc-python-reimplemented   # 简体层需要
+bash scripts/run_pipeline.sh
+```
 
-# 2) 清洗 → 解析 → 建索引
-python3 scripts/extraction/clean.py            # HTML → 纯文本
-python3 scripts/extraction/parse_acupoints.py  # 卷八/九/十/十一 → 穴位
-python3 scripts/extraction/build_symptoms.py   # 症状 → 原文上下文
-python3 scripts/extraction/curate_forbidden3.py  # 禁灸穴分类
+路径通过环境变量覆盖，便于隔离测试（**不会误改线上数据**）：
 
-# 3) 生成简体层（需 opencc）
-pip install --target /tmp/occdir opencc-python-reimplemented
+| 变量 | 默认 | 说明 |
+|---|---|---|
+| `TCM_WORKSPACE` | `/tmp/tcm-src` | 语料与中间产物目录 |
+| `TCM_DATA` | `<repo>/data` | 目标 skill 数据目录 |
+| `SKIP_COPY` | — | 设为 `1` 则只重建到 `skill-data/`，不覆盖 `TCM_DATA` |
+
+### 完整 8 阶段（`run_pipeline.sh` 即按此顺序）
+
+```bash
+WS=/tmp/tcm-src    # 语料区
+
+# 0) 抓取（各卷独立，注意加间隔避免限流）
+curl -A 'Mozilla/5.0' 'https://zh.wikisource.org/wiki/针灸大成/卷十' -o "$WS/zjdc_十.html"
+
+# 1) HTML → 纯文本
+python3 scripts/extraction/clean.py
+# 2) 卷八/九/十/十一 → 穴位原始条目      ($WS/acupoints_raw.json)
+python3 scripts/extraction/parse_acupoints.py
+# 3) 症状关键字全文检索 → 症状索引        ($WS/symptom_index.json)
+python3 scripts/extraction/build_symptoms.py
+# 4) 组装 skill 数据                      ($WS/skill-data/*.json)
+python3 scripts/extraction/build_skill_data.py
+
+# 5) 交付：把 $WS/skill-data/*.json 复制进 skill 的 data/  ← 此步之后操作 $TCM_DATA
+# 6) 禁灸穴分类（明确 17 / 分歧 11 / 噪声 6）
+python3 scripts/extraction/curate_forbidden3.py
+# 7) 缺字修复（Unicode 私用区 → □）
+python3 scripts/extraction/fix_pua.py
+# 8) 简体层生成 + 非穴位噪声清理
 python3 scripts/extraction/build_simplified.py
+python3 scripts/extraction/clean_v2.py
 
-# 4) 校验
+# 校验
 python3 scripts/validate_skill.py
 ```
+
+### 阶段间的数据依赖（易错点）
+
+- **6 必须在 8 之前**：`clean_v2.py` 会读取 `moxa_forbidden.json` 的 `noise_dropped`
+  清单来剔除人工判定的 6 条噪声（截断名/章节标题/药名）。顺序颠倒会导致
+  复现结果多出 6 条（457 而非 451）。
+- **8 在 7 之后**：`build_simplified.py` 负责生成 `_s` 简体字段，`clean_v2.py` 依赖它
+  补齐 `forbidden_by_s` 等字段。
+- 中间产物 `acupoints_raw.json`（516 条）≠ 最终库（451 条）：前者是规则切分结果，
+  含噪声；后者经过 6→8 的清理与标注（组装后 475 条，剔除 24 条噪声得 451）。
+
+### 其他脚本（辅助/探索，非流水线环节）
+
+- `audit_forbidden.py` —— 审查禁灸条目，区分真穴位/噪声/典籍分歧
+- `curate_forbidden2.py` —— `curate_forbidden3.py` 的前一版（出处归因不完整，保留供追溯）
+- `clean.py` 之外的早期探索脚本已废弃（如 HTML 转文本的第一版）
 
 ## 7. 与其他 skill 的关系
 

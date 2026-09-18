@@ -8,7 +8,18 @@ import json
 import re
 from pathlib import Path
 
-CLEAN = Path("/tmp/tcm-src/clean")
+
+# --- workspace / data paths (override via env) -------------------------------
+import os as _os
+
+_HERE = Path(__file__).resolve()
+SKILL_ROOT = _HERE.parents[2]      # scripts/extraction/x.py -> skill root
+DATA = Path(_os.environ.get("TCM_DATA", str(SKILL_ROOT / "data")))
+WORKSPACE = Path(_os.environ.get("TCM_WORKSPACE", "/tmp/tcm-src"))
+# -----------------------------------------------------------------------------
+
+
+CLEAN = (WORKSPACE / "clean")
 
 # symptom -> search terms (traditional forms as they appear in the texts)
 SYMPTOMS = {
@@ -62,7 +73,7 @@ for sym, terms in SYMPTOMS.items():
                   "moxa_hits": len(with_moxa),
                   "passages": (with_moxa or hits)[:MAX_PER_SYMPTOM]}
 
-Path("/tmp/tcm-src/symptom_index.json").write_text(
+(WORKSPACE / "symptom_index.json").write_text(
     json.dumps(index, ensure_ascii=False, indent=1), encoding="utf-8")
 
 print(f"{'症状':22s} {'总命中':>6s} {'带灸法':>7s}")

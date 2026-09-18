@@ -60,9 +60,20 @@ python3 $SK/scripts/validate_skill.py     # 47 项回归验证
 
 ## 数据可复现
 
-`scripts/extraction/` 保留了 9 个提取脚本（HTML 清洗 → 穴位解析 → 症状索引 →
-禁灸分类 → 简体层生成 → PUA 清理），数据不是黑盒，可完整重建。详见
-`references/03-classical-sources.md`。
+一条命令从古籍 HTML 重建全部数据：
+
+```bash
+pip install --target /tmp/occdir opencc-python-reimplemented   # 简体层需要
+bash scripts/run_pipeline.sh
+```
+
+产出的 `acupoints.json`（451 条）、`moxa_forbidden.json`、`symptoms.json` 与仓库内数据
+**逐字段完全一致**（已验证，差异 0 处）。`scripts/extraction/` 保留 10 个提取脚本，
+数据不是黑盒。
+
+路径可用环境变量覆盖以便隔离测试，**不会误改线上数据**：
+`TCM_WORKSPACE`（语料区，默认 `/tmp/tcm-src`）、`TCM_DATA`（目标数据目录）、
+`TCM_OPENCC_DIR`。详见 `references/03-classical-sources.md` §6。
 
 ## ⚠️ 重要边界
 

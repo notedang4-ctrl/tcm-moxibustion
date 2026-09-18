@@ -13,10 +13,21 @@ import json
 import sys
 from pathlib import Path
 
-sys.path.insert(0, "/tmp/occdir")
+import os as _os
+sys.path.insert(0, _os.environ.get("TCM_OPENCC_DIR", "/tmp/occdir"))
 from opencc import OpenCC  # noqa: E402
 
-DATA = Path("/root/.hermes/skills/tcm-moxibustion/data")
+
+# --- workspace / data paths (override via env) -------------------------------
+
+_HERE = Path(__file__).resolve()
+SKILL_ROOT = _HERE.parents[2]      # scripts/extraction/x.py -> skill root
+DATA = Path(_os.environ.get("TCM_DATA", str(SKILL_ROOT / "data")))
+WORKSPACE = Path(_os.environ.get("TCM_WORKSPACE", "/tmp/tcm-src"))
+# -----------------------------------------------------------------------------
+
+
+
 cc = OpenCC("t2s")
 
 # opencc t2s misses these TCM conventions

@@ -146,6 +146,24 @@ v_num = ver_skill.replace("version:", "").strip()
 check(f"版本三元同步 ({v_num})", top and top.group(1) == v_num,
       f"SKILL.md={v_num} CHANGELOG={top.group(1) if top else '?'}")
 
+print("\n[16] 提取脚本可移植（无硬编码绝对路径）")
+ext = SK / "scripts" / "extraction"
+# 精确检测：Path("/...") 字面绝对路径。os.environ.get(k, "/tmp/...") 的默认值是允许的。
+hard = []
+for f in sorted(ext.glob("*.py")):
+    t = f.read_text(encoding="utf-8")
+    for m in re.finditer(r'Path\(\s*"(/[^"]+)"', t):
+        hard.append(f"{f.name}: {m.group(1)}")
+check(f"无 Path() 硬编码绝对路径（{len(list(ext.glob('*.py')))} 个脚本）", not hard,
+      f"{len(hard)} 处: {hard[:3]}")
+check("支持 TCM_DATA 覆盖", '"TCM_DATA"' in (ext / "clean_v2.py").read_text(encoding="utf-8"))
+check("支持 TCM_WORKSPACE 覆盖", '"TCM_WORKSPACE"' in (ext / "clean_v2.py").read_text(encoding="utf-8"))
+check("run_pipeline.sh 存在", (SK / "scripts" / "run_pipeline.sh").exists())
+rp = (SK / "scripts" / "run_pipeline.sh").read_text(encoding="utf-8")
+check("流水线 8 阶段齐全", all(f"{i}/8" in rp for i in range(1, 9)),
+      "阶段标记缺失")
+check("clean_v2 读取 noise_dropped", "noise_dropped" in (ext / "clean_v2.py").read_text(encoding="utf-8"))
+
 print("\n" + "=" * 70)
 print("结果:", "全部通过 ✅" if ok else "存在失败项 ❌")
 print("=" * 70)

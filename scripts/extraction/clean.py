@@ -4,8 +4,19 @@ import re
 import html
 from pathlib import Path
 
-SRC = Path("/tmp/tcm-src")
-OUT = Path("/tmp/tcm-src/clean")
+
+# --- workspace / data paths (override via env) -------------------------------
+import os as _os
+
+_HERE = Path(__file__).resolve()
+SKILL_ROOT = _HERE.parents[2]      # scripts/extraction/x.py -> skill root
+DATA = Path(_os.environ.get("TCM_DATA", str(SKILL_ROOT / "data")))
+WORKSPACE = Path(_os.environ.get("TCM_WORKSPACE", "/tmp/tcm-src"))
+# -----------------------------------------------------------------------------
+
+
+SRC = WORKSPACE
+OUT = (WORKSPACE / "clean")
 OUT.mkdir(exist_ok=True)
 
 # content begins after these markers, ends before the license footer

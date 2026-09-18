@@ -5,7 +5,18 @@ import json
 import re
 from pathlib import Path
 
-DATA = Path("/root/.hermes/skills/tcm-moxibustion/data")
+
+# --- workspace / data paths (override via env) -------------------------------
+import os as _os
+
+_HERE = Path(__file__).resolve()
+SKILL_ROOT = _HERE.parents[2]      # scripts/extraction/x.py -> skill root
+DATA = Path(_os.environ.get("TCM_DATA", str(SKILL_ROOT / "data")))
+WORKSPACE = Path(_os.environ.get("TCM_WORKSPACE", "/tmp/tcm-src"))
+# -----------------------------------------------------------------------------
+
+
+
 pts = json.loads((DATA / "acupoints.json").read_text(encoding="utf-8"))
 
 NOISE = {

@@ -7,9 +7,20 @@ import re
 import sys
 from pathlib import Path
 
-sys.path.insert(0, "/tmp/tcm-src")
 
-D = Path("/root/.hermes/skills/tcm-moxibustion/data/acupoints.json")
+# --- workspace / data paths (override via env) -------------------------------
+import os as _os
+
+_HERE = Path(__file__).resolve()
+SKILL_ROOT = _HERE.parents[2]      # scripts/extraction/x.py -> skill root
+DATA = Path(_os.environ.get("TCM_DATA", str(SKILL_ROOT / "data")))
+WORKSPACE = Path(_os.environ.get("TCM_WORKSPACE", "/tmp/tcm-src"))
+# -----------------------------------------------------------------------------
+
+
+sys.path.insert(0, str(WORKSPACE))
+
+D = (DATA / "acupoints.json")
 pts = json.loads(D.read_text(encoding="utf-8"))
 
 # headings / non-acupoint tokens that leaked through the parser

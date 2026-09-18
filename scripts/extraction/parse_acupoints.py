@@ -9,7 +9,18 @@ import json
 import re
 from pathlib import Path
 
-CLEAN = Path("/tmp/tcm-src/clean")
+
+# --- workspace / data paths (override via env) -------------------------------
+import os as _os
+
+_HERE = Path(__file__).resolve()
+SKILL_ROOT = _HERE.parents[2]      # scripts/extraction/x.py -> skill root
+DATA = Path(_os.environ.get("TCM_DATA", str(SKILL_ROOT / "data")))
+WORKSPACE = Path(_os.environ.get("TCM_WORKSPACE", "/tmp/tcm-src"))
+# -----------------------------------------------------------------------------
+
+
+CLEAN = (WORKSPACE / "clean")
 
 CN_NUM = {"一":1,"二":2,"三":3,"四":4,"五":5,"六":6,"七":7,"八":8,"九":9,"十":10,
           "十一":11,"十二":12,"十四":14,"十六":16,"十八":18,"二十":20,"廿":20,
@@ -88,7 +99,7 @@ for e in allp:
     if k not in by or (e["source"] == "zjdc_八" and by[k]["source"] != "zjdc_八"):
         by[k] = e
 
-Path("/tmp/tcm-src/acupoints_raw.json").write_text(
+(WORKSPACE / "acupoints_raw.json").write_text(
     json.dumps(list(by.values()), ensure_ascii=False, indent=1), encoding="utf-8")
 
 print(f"\n去重后穴位条目: {len(by)}")
