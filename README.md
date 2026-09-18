@@ -27,6 +27,9 @@ bash install.sh
 真身只有一份，升级只改一处。已装 WorkBuddy / Hermes / Claude Code 的会被自动识别；
 Codex 会在 `~/.codex/AGENTS.md` 追加指针段。
 
+> **请 clone 到持久目录**（如 `~/skills/`）。从 `/tmp` 等易失位置运行 `install.sh`
+> 会把已有安装顶替为指向该位置的软链，清理后即失效 —— 脚本会检测并直接拒绝。
+
 ## 使用
 
 ```bash

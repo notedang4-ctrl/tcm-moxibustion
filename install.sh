@@ -32,6 +32,48 @@ echo "    python:  ${PY_BIN}"
 [ -f "${SKROOT}/SKILL.md" ]          || { echo "错误: 缺少 ${SKROOT}/SKILL.md" >&2; exit 1; }
 [ -f "${SKROOT}/scripts/query.py" ]  || { echo "错误: 缺少 ${SKROOT}/scripts/query.py" >&2; exit 1; }
 [ -d "${SKROOT}/data" ]              || { echo "错误: 缺少 ${SKROOT}/data" >&2; exit 1; }
+
+# --- 易失目录守卫 ---------------------------------------------------------
+# 真身必须是持久目录：各 agent 的 skills 目录都 symlink 到它。若从 /tmp 之类的
+# 易失位置运行，会把已有真身移成 .bak、换成指向 /tmp 的软链，清理后即失效。
+is_volatile() {
+  case "$1" in
+    /tmp/*|/var/tmp/*|/private/tmp/*|/dev/shm/*|/run/*|/var/run/*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+if is_volatile "$SKROOT"; then
+  # 检查是否已有真实安装会被顶替
+  existing=""
+  for d in "$HOME/.workbuddy/skills" "$HOME/.hermes/skills" "$HOME/.claude/skills"; do
+    p="$d/$SKILL_NAME"
+    if [ -d "$p" ] && [ ! -L "$p" ]; then existing="$p"; break; fi
+  done
+  if [ -n "$existing" ]; then
+    if [ "${FORCE_VOLATILE:-0}" != "1" ]; then
+      cat >&2 <<EOF
+错误: 真身位于易失目录，且已有真实安装会被顶替。
+
+  易失真身: ${SKROOT}
+  将被顶替: ${existing}
+
+从 /tmp 运行会把已有的真实 skill 目录移成 .bak，并让各 agent 的软链
+指向 ${SKROOT} —— 该目录被系统清理后 skill 即失效。
+
+请改为把仓库 clone 到持久位置后再装，例如：
+  git clone https://github.com/notedang4-ctrl/tcm-moxibustion.git ~/skills/tcm-moxibustion
+  bash ~/skills/tcm-moxibustion/install.sh
+
+确实要强行继续（不推荐）：FORCE_VOLATILE=1 bash install.sh
+EOF
+      exit 1
+    fi
+    echo "  ⚠️  警告: 真身位于易失目录 ${SKROOT}，已按 FORCE_VOLATILE=1 强行继续" >&2
+  else
+    echo "  ⚠️  注意: 真身位于易失目录 ${SKROOT}（清理后 skill 即失效）"
+  fi
+fi
+
 chmod +x "${SKROOT}/scripts/query.py" 2>/dev/null || true
 
 # 数据自检（内置回归，失败即中止，避免装上坏数据）
