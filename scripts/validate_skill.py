@@ -130,6 +130,22 @@ check("以 --- 开头", sm.startswith("---\n"))
 check("含 name 字段", "\nname: tcm-moxibustion\n" in sm)
 check("含 description 字段", "\ndescription: " in sm)
 
+print("\n[15] 文档数字与数据一致（防文档飘移）")
+n_pts = len(pts)
+n_cones = sum(1 for p in pts if p["moxa_cones"])
+src = (SK / "references" / "03-classical-sources.md").read_text(encoding="utf-8")
+check(f"03 文件穴位数=实际 {n_pts}", f"**{n_pts}** 条" in src,
+      "未找到匹配数字" if f"**{n_pts}** 条" not in src else "")
+check(f"03 文件灸壮数=实际 {n_cones}", f"**{n_cones}** 条" in src,
+      "未找到匹配数字" if f"**{n_cones}** 条" not in src else "")
+check("SKILL.md 穴位数=实际", f"{n_pts} 个穴位" in sm)
+ver_skill = next((l for l in sm.split("\n") if l.startswith("version:")), "")
+ver_cl = (SK / "CHANGELOG.md").read_text(encoding="utf-8")
+top = re.search(r"^## \[([0-9.]+)\]", ver_cl, re.M)
+v_num = ver_skill.replace("version:", "").strip()
+check(f"版本三元同步 ({v_num})", top and top.group(1) == v_num,
+      f"SKILL.md={v_num} CHANGELOG={top.group(1) if top else '?'}")
+
 print("\n" + "=" * 70)
 print("结果:", "全部通过 ✅" if ok else "存在失败项 ❌")
 print("=" * 70)

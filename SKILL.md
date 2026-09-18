@@ -1,7 +1,7 @@
 ---
 name: tcm-moxibustion
 description: 中医艾灸取穴速查。按症状查该灸哪里、灸多少壮、哪些穴禁灸，附《针灸大成》《备急灸法》《扁鹊心书》等古籍原文出处。触发词：艾灸、灸哪里、穴位、穴位作用、怎么灸、灸几壮、脚冷、手脚冰凉、腰疼、腰痛、胃寒、宫寒、痛经、体寒、阳虚、怕冷、腹泻、久泄、失眠、夜尿、关节冷痛、老寒腿、禁灸、壮数、隔姜灸、隔盐灸、艾条。注意：仅供学习参考，非诊疗建议；阴虚火旺、发热、孕期及部分部位禁灸，须先读安全边界。
-version: 1.0.1
+version: 1.0.2
 platforms: [linux, macos, windows]
 metadata:
   hermes:
@@ -173,7 +173,25 @@ python3 $SK/scripts/query.py forbidden disputed   # 只看典籍分歧项
 - 壮数为古籍记载（如「灸百壮」），**现代实践通常远小于此**，勿直接照搬
 - 涉及诊断、用药、穴位注射、针刺操作 → **超出本 skill 范围，交由执业医师**
 
-## 5. 参考文件
+## 5. 成本纪律（省 token，重要）
+
+**一律用 `query.py`，绝不要直接读 `data/*.json`。** 实测差距：
+
+| 方式 | 进入上下文的量 |
+|---|---|
+| `query.py point 肾俞` | ~232 token |
+| `query.py symptom 脚冷` | ~1,656 token |
+| `query.py point 肾俞 气海 关元 太溪` | ~983 token |
+| **直接读 `data/acupoints.json`** | **~129,966 token（约 56 倍差距）** |
+| 直接读 `data/symptoms.json` | ~47,994 token |
+
+要点：
+- **一次 `point` 查多个穴**（`point 肾俞 气海 关元`）比分开跑多次省 —— 数据只加载一次
+- `symptom <症状>` 输出较长（含古籍上下文原段），因为它就是交付内容；
+  只要取穴结论时可先看 `symptom-list`（~264 token）确认分类
+- 参考文件只在需要时按需读，别预先全读
+
+## 6. 参考文件
 
 - `references/01-moxa-methods.md` —— 灸法操作细节、壮数换算、施灸流程
 - `references/02-safety-contraindications.md` —— 完整禁忌清单与急救处理
